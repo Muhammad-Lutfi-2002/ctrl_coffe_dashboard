@@ -6,7 +6,14 @@ import { getThemeInitScript } from "@agent-native/core/client/ui";
 import { AppProviders } from "@agent-native/toolkit/app/providers";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
+import {
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+  useLocation,
+} from "react-router";
 import type { LinksFunction } from "react-router";
 
 import { Layout as AppLayout } from "@/components/layout/Layout";
@@ -81,12 +88,21 @@ function DbSyncSetup() {
   return null;
 }
 
+/**
+ * Halaman masuk harus publik di sisi klien juga. Tanpa ini gate sesi framework (RequireSession) melihat
+ * pengunjung belum login di `/masuk`, mengirimnya ke `/sign-in?c=…`, lalu `/sign-in` kembali ke `/masuk?c=…`
+ * sehingga terjadi loop refresh tanpa akhir.
+ */
+const PUBLIC_PATHS = new Set(["/masuk"]);
+
 export default function Root() {
   const [queryClient] = useState(() => createAgentNativeQueryClient());
+  const { pathname } = useLocation();
+  const isPublicPath = PUBLIC_PATHS.has(pathname.replace(/\/+$/, "") || "/");
   return (
     <AppToolkitProvider>
-      <AppProviders queryClient={queryClient}>
-        <DbSyncSetup />
+      <AppProviders queryClient={queryClient} isPublicPath={isPublicPath}>
+        {isPublicPath ? null : <DbSyncSetup />}
         <AppLayout>
           <Outlet />
         </AppLayout>
