@@ -8,9 +8,14 @@
 | `DATABASE_URL_UNPOOLED` | server | Migrasi: koneksi langsung (5432) atau session pooler. **Jangan** transaction pooler. |
 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | server | Validasi sesi (`auth.getUser`) |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` | browser | Publik by design; dipakai halaman masuk |
+| `BETTER_AUTH_SECRET` | server | Wajib di produksi: framework Agent-Native memeriksanya saat start (`openssl rand -hex 32`) walau login memakai Supabase Auth. Nilai tetap, jangan diganti-ganti. |
 | `SUPABASE_SERVICE_ROLE_KEY` | **server saja** | Hanya untuk `create-user`. Jangan pernah diawali `VITE_`. |
 
 Tidak ada kata sandi database atau service key di repo. Kata sandi DB tidak dapat dibaca melalui MCP; isi sendiri di `.env`/Netlify.
+
+Catatan Vercel: variabel hanya berlaku pada deployment baru, jadi lakukan **Redeploy** setelah mengubah env. `CRON_SECRET` perlu diisi bila cron framework aktif; pada paket Hobby jadwal harian sudah diatur di `vercel.json`.
+
+Halaman masuk berada di `/masuk`; framework mencegat `/login` dan `/signup` sebelum `publicPaths`, sehingga `server/plugins/auth.ts` menyediakan `loginHtml` yang meneruskan `/login` ke `/masuk`.
 
 ## 3.2 Migrasi — satu sumber: Drizzle Kit
 

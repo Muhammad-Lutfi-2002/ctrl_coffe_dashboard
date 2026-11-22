@@ -11,9 +11,26 @@ const session = async (event: Parameters<typeof getSupabaseSession>[0]) => {
   return s ? { email: s.email, userId: s.userId, name: s.name } : null;
 };
 
+/**
+ * Framework selalu mencegat `/login` dan `/signup` (sebelum memeriksa `publicPaths`) lalu menampilkan halaman
+ * "Sign in is not configured" bila plugin auth kustom tidak menyediakan `loginHtml`. Karena itu halaman masuk
+ * aplikasi berada di `/masuk`, dan `/login` hanya meneruskan (redirect) ke sana agar tautan lama tetap berfungsi.
+ */
+const LOGIN_REDIRECT_HTML = `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Masuk - CTRL Coffee</title>
+<script>location.replace("/masuk" + location.search);</script>
+</head>
+<body><p><a href="/masuk">Lanjut ke halaman masuk</a></p></body>
+</html>`;
+
 export default createAuthPlugin({
   rootAuth: false,
   getSession: session,
   getBrowserSession: session, // hanya cookie
-  publicPaths: ["/login"],
+  loginHtml: LOGIN_REDIRECT_HTML,
+  publicPaths: ["/masuk"],
 });

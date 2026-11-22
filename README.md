@@ -30,7 +30,7 @@ pnpm db:migrate
 pnpm dev
 ```
 
-Set `AUTH_DISABLED=true` in `.env` to skip sign-in during development.
+Isi `.env` (lihat `.env.example`) lalu masuk lewat `/masuk` dengan akun Supabase Auth.
 
 ## Scripts
 
@@ -69,9 +69,10 @@ Set `AUTH_DISABLED=true` in `.env` to skip sign-in during development.
 - `shared/scm/rules.spec.ts`: unit tests for the business rules.
 - `actions/scm-workflow.spec.ts`: integration tests that run the actions against an in-memory PGlite database, covering receiving, cancellation, payment caps, request approval, and reference checks.
 
-## Known limitations
+## Autentikasi dan peran
 
-- **Authentication and roles are not enforced on the server.** The role selector on the login page is a client-side preview stored in local storage. Every action currently accepts any caller. Server-side role-based access control needs organization membership and app-role setup in the framework before it can be enforced.
-- Login form submission is a preview flow; it does not create a session.
+- Login memakai **Supabase Auth** (email + kata sandi) di halaman `/masuk`. `/login` hanya meneruskan ke `/masuk` karena framework Agent-Native mencegat `/login`.
+- Identitas hanya dari cookie sesi Supabase yang divalidasi server; peran dibaca dari tabel `users` + `roles`, dan setiap action memanggil `requireRole()` (lihat `docs/03-konfigurasi-dan-deployment.md`).
+- Akun Owner pertama dibuat lewat Supabase Auth lalu didaftarkan ke tabel `users` (docs 3.3).
 
 Framework docs: [agent-native.com/docs](https://agent-native.com/docs).
