@@ -18,7 +18,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { pathname } = useLocation();
-  if (pathname === "/login") return <>{children}</>;
+  if (pathname === "/masuk") return <>{children}</>;
   return (
     <HeaderActionsProvider>
       <SessionGate>
@@ -33,7 +33,7 @@ function SessionGate({ children }: LayoutProps) {
   const { user, isLoading, error } = useUser();
   const unauthorized = !isLoading && !user && !!error;
   useEffect(() => {
-    if (unauthorized && (error?.statusCode === 401 || error?.status === 401 || /Sesi tidak valid|401/.test(error?.message ?? ""))) window.location.assign("/login");
+    if (unauthorized && (error?.statusCode === 401 || error?.status === 401 || /Sesi tidak valid|401/.test(error?.message ?? ""))) window.location.assign("/masuk");
   }, [unauthorized, error]);
   if (isLoading) return <div className="flex h-screen items-center justify-center text-sm text-muted-foreground">Memuat sesi…</div>;
   if (!user) {
@@ -41,7 +41,7 @@ function SessionGate({ children }: LayoutProps) {
       <div className="flex h-screen flex-col items-start justify-center gap-3 p-10">
         <h1 className="text-xl font-semibold tracking-tight">Akun tidak dapat digunakan</h1>
         <p className="max-w-md text-sm text-muted-foreground">{error?.message ?? "Sesi tidak ditemukan."} Hubungi Admin/Owner untuk didaftarkan atau diaktifkan.</p>
-        <Button onClick={() => window.location.assign("/login")}>Ke halaman masuk</Button>
+        <Button onClick={() => window.location.assign("/masuk")}>Ke halaman masuk</Button>
       </div>
     );
   }

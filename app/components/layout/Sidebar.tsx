@@ -16,7 +16,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   async function handleSignOut() {
     onNavigate?.();
     await supabaseBrowser().auth.signOut();
-    window.location.assign("/login");
+    window.location.assign("/masuk");
   }
 
   return (
