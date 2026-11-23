@@ -35,7 +35,7 @@ export default function SalesAnalyticsRoute() {
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">Tren per<select className={`${nativeSelectClass} w-32`} value={granularity} onChange={(e) => setGranularity(e.target.value as any)}><option value="day">Hari</option><option value="week">Minggu</option><option value="month">Bulan</option></select></label>
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">Kategori<select className={`${nativeSelectClass} w-44`} value={idCategories} onChange={(e) => setCat(e.target.value)}><option value="">Semua</option>{(cats.data ?? []).map((c) => <option key={c.idCategories} value={c.idCategories}>{c.categoryName}</option>)}</select></label>
       </div>
-      {!s ? <p className="text-sm text-muted-foreground">Memuat…</p> : s.transactionCount === 0 && s.previous.transactionCount === 0 ? <Empty>Belum ada transaksi penjualan pada periode ini. Input atau impor data di halaman Data Penjualan.</Empty> : (
+      {d.error && !s ? <Empty>Analitik gagal dimuat: {d.error.message}. <button type="button" className="ml-1 text-primary underline" onClick={() => void d.refetch()}>Coba lagi</button></Empty> : !s ? <p className="text-sm text-muted-foreground">Memuat…</p> : s.transactionCount === 0 && s.previous.transactionCount === 0 ? <Empty>Belum ada transaksi penjualan pada periode ini. Input atau impor data di halaman Data Penjualan.</Empty> : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard label="Total pendapatan" value={formatIDR(s.totalRevenue)} />

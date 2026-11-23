@@ -13,9 +13,16 @@ export type Exec = Pick<Db, "select" | "insert" | "update" | "delete" | "execute
 export type Actor = { idUsers: string; email: string; fullName: string; roleCode: RoleCode };
 
 /** Identitas pengguna berasal dari sesi server (bukan dari klien); peran dibaca dari tabel users+roles. */
+const ACTOR_TTL_MS = 15_000;
+const actorCache = new Map<string, { at: number; actor: Actor }>();
+
 export async function currentActor(db: Exec = getDb()): Promise<Actor> {
   const email = getRequestUserEmail();
   if (!email) fail("Sesi tidak valid. Silakan masuk kembali.", { statusCode: 401 });
+  // Satu halaman memanggil belasan action; tanpa cache tiap action menambah satu round-trip ke basis data.
+  // TTL pendek (15 dtk) agar perubahan peran atau penonaktifan akun tetap segera berlaku.
+  const hit = actorCache.get(email.toLowerCase());
+  if (hit && Date.now() - hit.at < ACTOR_TTL_MS) return hit.actor;
   const [row] = await db
     .select({ idUsers: schema.users.idUsers, email: schema.users.email, fullName: schema.users.fullName, isActive: schema.users.isActive, roleCode: schema.roles.roleCode })
     .from(schema.users)
@@ -23,7 +30,10 @@ export async function currentActor(db: Exec = getDb()): Promise<Actor> {
     .where(eq(sql`lower(${schema.users.email})`, email.toLowerCase()));
   if (!row) fail("Akun belum terdaftar sebagai pengguna CTRL + Coffee.", { statusCode: 403 });
   if (!row.isActive) fail("Akun dinonaktifkan.", { statusCode: 403 });
-  return { idUsers: row.idUsers, email: row.email, fullName: row.fullName, roleCode: row.roleCode as RoleCode };
+  const actor: Actor = { idUsers: row.idUsers, email: row.email, fullName: row.fullName, roleCode: row.roleCode as RoleCode };
+  if (actorCache.size > 200) actorCache.clear();
+  actorCache.set(email.toLowerCase(), { at: Date.now(), actor });
+  return actor;
 }
 
 /** Otorisasi di server untuk setiap action (RBAC) — tidak bergantung pada menu frontend. */

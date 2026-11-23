@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useUser } from "@/hooks/use-user";
 import { canAccess, findNavItem, ROLE_LABELS } from "@/lib/nav";
 
+import { QueryErrorBanner } from "./QueryErrorBanner";
 import { Sidebar } from "./Sidebar";
 
 interface LayoutProps {
@@ -82,6 +83,7 @@ function ShellFrame({ children }: LayoutProps) {
           {user ? <Badge variant="outline">{ROLE_LABELS[user.roleCode]}</Badge> : null}
         </header>
         <main className="min-h-0 flex-1 overflow-y-auto">
+          <QueryErrorBanner />
           <AccessGate>{children}</AccessGate>
         </main>
       </div>
