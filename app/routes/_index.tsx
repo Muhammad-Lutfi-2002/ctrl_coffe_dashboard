@@ -17,8 +17,9 @@ export function meta() {
 
 export default function DashboardRoute() {
   const { user } = useUser();
-  const { data: s, isLoading } = useList<any>("get-operational-summary");
+  const { data: s, isLoading, error, refetch } = useList<any>("get-operational-summary");
   const role = user?.roleCode;
+  if (error && !s) return <PageBody><PageHeader title="Dashboard" /><Empty>Ringkasan gagal dimuat: {error.message}. <button type="button" className="ml-1 text-primary underline" onClick={() => void refetch()}>Coba lagi</button></Empty></PageBody>;
   if (isLoading || !s) return <PageBody><PageHeader title="Dashboard" /><p className="text-sm text-muted-foreground">Memuat ringkasan…</p></PageBody>;
   const fin = s.finance as any | undefined;
   return (

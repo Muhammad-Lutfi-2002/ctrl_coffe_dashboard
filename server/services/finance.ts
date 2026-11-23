@@ -61,11 +61,11 @@ export async function listInvoices(db: Exec) {
     .innerJoin(S.suppliers, eq(S.suppliers.idSuppliers, S.supplierQuotations.idSuppliers)).orderBy(sql`${S.supplierInvoices.createdAt} desc`).limit(200);
   if (invs.length === 0) return [];
   const ids = invs.map((i) => i.idSupplierInvoices);
-  const lines = await db.select({ idSupplierInvoices: S.invoiceItems.idSupplierInvoices, idPoItems: S.invoiceItems.idPoItems, qty: S.invoiceItems.qtyInvoiced, price: S.invoiceItems.unitPrice, materialName: S.materials.materialName })
+  const [lines, pays] = await Promise.all([db.select({ idSupplierInvoices: S.invoiceItems.idSupplierInvoices, idPoItems: S.invoiceItems.idPoItems, qty: S.invoiceItems.qtyInvoiced, price: S.invoiceItems.unitPrice, materialName: S.materials.materialName })
     .from(S.invoiceItems).innerJoin(S.poItems, eq(S.poItems.idPoItems, S.invoiceItems.idPoItems)).innerJoin(S.quotationItems, eq(S.quotationItems.idQuotationItems, S.poItems.idQuotationItems))
-    .innerJoin(S.materials, eq(S.materials.idMaterials, S.quotationItems.idMaterials)).where(inArray(S.invoiceItems.idSupplierInvoices, ids));
-  const pays = await db.select({ id: S.payments.idSupplierInvoices, s: sql<string>`coalesce(sum(${S.payments.amount}) filter (where ${S.payments.status} in ('pending_approval','approved','paid')), 0)`, paid: sql<string>`coalesce(sum(${S.payments.amount}) filter (where ${S.payments.status} = 'paid'), 0)` })
-    .from(S.payments).where(inArray(S.payments.idSupplierInvoices, ids)).groupBy(S.payments.idSupplierInvoices);
+    .innerJoin(S.materials, eq(S.materials.idMaterials, S.quotationItems.idMaterials)).where(inArray(S.invoiceItems.idSupplierInvoices, ids)),
+    db.select({ id: S.payments.idSupplierInvoices, s: sql<string>`coalesce(sum(${S.payments.amount}) filter (where ${S.payments.status} in ('pending_approval','approved','paid')), 0)`, paid: sql<string>`coalesce(sum(${S.payments.amount}) filter (where ${S.payments.status} = 'paid'), 0)` })
+    .from(S.payments).where(inArray(S.payments.idSupplierInvoices, ids)).groupBy(S.payments.idSupplierInvoices)]);
   return invs.map((i) => {
     const mine = lines.filter((l) => l.idSupplierInvoices === i.idSupplierInvoices);
     const total = round2(mine.reduce((s, l) => s + l.qty * l.price, 0));
@@ -145,14 +145,17 @@ export async function financeReport(db: Exec, period: string) {
   const from = `${period}-01`;
   const [y, m] = period.split("-").map(Number);
   const to = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
-  const [budget] = await db.select().from(S.budgets).where(eq(S.budgets.period, period));
-  const [ops] = await db.select({ s: sql<string>`coalesce(sum(${S.expenses.amount}), 0)` }).from(S.expenses).where(and(sql`${S.expenses.expenseDate} >= ${from}`, sql`${S.expenses.expenseDate} < ${to}`));
-  const [sup] = await db.select({ s: sql<string>`coalesce(sum(${S.payments.amount}), 0)` }).from(S.payments).where(and(eq(S.payments.status, "paid"), sql`${S.payments.paidAt} >= ${from}::date`, sql`${S.payments.paidAt} < ${to}::date`));
-  const invoices = await listInvoices(db);
+  const TZ = sql.raw("'Asia/Jakarta'");  // konsisten dengan dashboard analitik (hari WIB)
+  const [[budget], [ops], [sup], invoices, [rev]] = await Promise.all([
+    db.select().from(S.budgets).where(eq(S.budgets.period, period)),
+    db.select({ s: sql<string>`coalesce(sum(${S.expenses.amount}), 0)` }).from(S.expenses).where(and(sql`${S.expenses.expenseDate} >= ${from}`, sql`${S.expenses.expenseDate} < ${to}`)),
+    db.select({ s: sql<string>`coalesce(sum(${S.payments.amount}), 0)` }).from(S.payments).where(and(eq(S.payments.status, "paid"), sql`${S.payments.paidAt} >= ${from}::date`, sql`${S.payments.paidAt} < ${to}::date`)),
+    listInvoices(db),
+    db.select({ s: sql<string>`coalesce(sum(${S.salesItems.qty} * ${S.salesItems.unitPrice}), 0)` }).from(S.salesItems)
+      .innerJoin(S.salesTransactions, eq(S.salesTransactions.idSalesTransactions, S.salesItems.idSalesTransactions))
+      .where(and(sql`(${S.salesTransactions.trxDate} at time zone ${TZ})::date >= ${from}::date`, sql`(${S.salesTransactions.trxDate} at time zone ${TZ})::date < ${to}::date`)),
+  ]);
   const outstanding = round2(invoices.filter((i) => i.status === "matched").reduce((s, i) => s + (i.total - i.paid), 0));
-  const [rev] = await db.select({ s: sql<string>`coalesce(sum(${S.salesItems.qty} * ${S.salesItems.unitPrice}), 0)` }).from(S.salesItems)
-    .innerJoin(S.salesTransactions, eq(S.salesTransactions.idSalesTransactions, S.salesItems.idSalesTransactions))
-    .where(and(sql`${S.salesTransactions.trxDate} >= ${from}::date`, sql`${S.salesTransactions.trxDate} < ${to}::date`));
   const operational = round2(num(ops?.s)), supplierPaid = round2(num(sup?.s)), budgetAmount = budget ? budget.budgetAmount : null;
   return { period, budgetAmount, operationalExpenses: operational, supplierPayments: supplierPaid, totalOutflow: round2(operational + supplierPaid), budgetRemaining: budgetAmount === null ? null : round2(budgetAmount - operational - supplierPaid), outstandingPayables: outstanding, salesRevenue: round2(num(rev?.s)) };
 }

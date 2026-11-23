@@ -89,19 +89,21 @@ export async function addQuotation(tx: Tx, actor: Actor, input: QuotationInput) 
  * Supplier tanpa riwayat memakai nilai awal dari pengaturan.
  */
 export async function supplierPerformance(db: Exec, supplierIds?: string[]) {
-  const initial = Number(await getSetting(db, "new_supplier_performance_score", "70"));
-  const suppliers = await db.select({ id: S.suppliers.idSuppliers, name: S.suppliers.supplierName }).from(S.suppliers)
+  const initialP = getSetting(db, "new_supplier_performance_score", "70");
+  const suppliersP = db.select({ id: S.suppliers.idSuppliers, name: S.suppliers.supplierName }).from(S.suppliers)
     .where(supplierIds ? inArray(S.suppliers.idSuppliers, supplierIds) : undefined);
-  const receipts = await db
+  const receiptsP = db
     .select({ supplierId: S.supplierQuotations.idSuppliers, poId: S.purchaseOrders.idPurchaseOrders, expected: S.purchaseOrders.expectedDate, status: S.purchaseOrders.status, receivedAt: S.goodsReceipts.receivedAt })
     .from(S.goodsReceipts).innerJoin(S.purchaseOrders, eq(S.purchaseOrders.idPurchaseOrders, S.goodsReceipts.idPurchaseOrders))
     .innerJoin(S.supplierQuotations, eq(S.supplierQuotations.idSupplierQuotations, S.purchaseOrders.idSupplierQuotations));
-  const lines = await db
+  const linesP = db
     .select({ supplierId: S.supplierQuotations.idSuppliers, poId: S.poItems.idPurchaseOrders, poItem: S.poItems.idPoItems, ordered: S.poItems.qtyOrdered, accepted: sql<string>`coalesce(sum(${S.grItems.qtyAccepted}), 0)` })
     .from(S.poItems).innerJoin(S.purchaseOrders, eq(S.purchaseOrders.idPurchaseOrders, S.poItems.idPurchaseOrders))
     .innerJoin(S.supplierQuotations, eq(S.supplierQuotations.idSupplierQuotations, S.purchaseOrders.idSupplierQuotations))
     .leftJoin(S.grItems, eq(S.grItems.idPoItems, S.poItems.idPoItems))
     .groupBy(S.poItems.idPoItems, S.supplierQuotations.idSuppliers);
+  const [initialRaw, suppliers, receipts, lines] = await Promise.all([initialP, suppliersP, receiptsP, linesP]);
+  const initial = Number(initialRaw);
   const poMeta = new Map(receipts.map((r) => [r.poId, r]));
   const t = today();
   return suppliers.map((s) => {

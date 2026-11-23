@@ -67,18 +67,20 @@ export async function salesDashboard(db: Exec, f: SalesFilter) {
   const days = Math.max(1, Math.round((Date.parse(f.to) - Date.parse(f.from)) / 86400000) + 1);
   const prevTo = new Date(Date.parse(f.from) - 86400000).toISOString().slice(0, 10);
   const prevFrom = new Date(Date.parse(f.from) - days * 86400000).toISOString().slice(0, 10);
-  const cur = await periodAggregate(db, f.from, f.to, f.idCategories);
-  const prev = await periodAggregate(db, prevFrom, prevTo, f.idCategories);
   const range = and(sql`(${S.salesTransactions.trxDate} at time zone ${TZ})::date >= ${f.from}::date`, sql`(${S.salesTransactions.trxDate} at time zone ${TZ})::date <= ${f.to}::date`, f.idCategories ? eq(S.products.idCategories, f.idCategories) : undefined);
   const bucket = sql<string>`to_char(date_trunc(${sql.raw(`'${f.granularity}'`)}, ${S.salesTransactions.trxDate} at time zone ${TZ}), 'YYYY-MM-DD')`;
-  const trend = await db.select({ bucket, revenue: sql<string>`sum(${S.salesItems.qty} * ${S.salesItems.unitPrice})`, trx: sql<number>`count(distinct ${S.salesTransactions.idSalesTransactions})::int` })
-    .from(S.salesItems).innerJoin(S.salesTransactions, eq(S.salesTransactions.idSalesTransactions, S.salesItems.idSalesTransactions)).innerJoin(S.products, eq(S.products.idProducts, S.salesItems.idProducts)).where(range).groupBy(bucket).orderBy(bucket);
-  const top = await db.select({ idProducts: S.products.idProducts, productName: S.products.productName, qty: sql<string>`sum(${S.salesItems.qty})`, revenue: sql<string>`sum(${S.salesItems.qty} * ${S.salesItems.unitPrice})` })
+  const [cur, prev, trend, top, byCategory] = await Promise.all([
+    periodAggregate(db, f.from, f.to, f.idCategories),
+    periodAggregate(db, prevFrom, prevTo, f.idCategories),
+    db.select({ bucket, revenue: sql<string>`sum(${S.salesItems.qty} * ${S.salesItems.unitPrice})`, trx: sql<number>`count(distinct ${S.salesTransactions.idSalesTransactions})::int` })
+    .from(S.salesItems).innerJoin(S.salesTransactions, eq(S.salesTransactions.idSalesTransactions, S.salesItems.idSalesTransactions)).innerJoin(S.products, eq(S.products.idProducts, S.salesItems.idProducts)).where(range).groupBy(bucket).orderBy(bucket),
+    db.select({ idProducts: S.products.idProducts, productName: S.products.productName, qty: sql<string>`sum(${S.salesItems.qty})`, revenue: sql<string>`sum(${S.salesItems.qty} * ${S.salesItems.unitPrice})` })
     .from(S.salesItems).innerJoin(S.salesTransactions, eq(S.salesTransactions.idSalesTransactions, S.salesItems.idSalesTransactions)).innerJoin(S.products, eq(S.products.idProducts, S.salesItems.idProducts)).where(range)
-    .groupBy(S.products.idProducts).orderBy(sql`sum(${S.salesItems.qty} * ${S.salesItems.unitPrice}) desc`).limit(10);
-  const byCategory = await db.select({ category: S.categories.categoryName, revenue: sql<string>`sum(${S.salesItems.qty} * ${S.salesItems.unitPrice})` })
+    .groupBy(S.products.idProducts).orderBy(sql`sum(${S.salesItems.qty} * ${S.salesItems.unitPrice}) desc`).limit(10),
+    db.select({ category: S.categories.categoryName, revenue: sql<string>`sum(${S.salesItems.qty} * ${S.salesItems.unitPrice})` })
     .from(S.salesItems).innerJoin(S.salesTransactions, eq(S.salesTransactions.idSalesTransactions, S.salesItems.idSalesTransactions)).innerJoin(S.products, eq(S.products.idProducts, S.salesItems.idProducts)).innerJoin(S.categories, eq(S.categories.idCategories, S.products.idCategories))
-    .where(range).groupBy(S.categories.categoryName).orderBy(sql`sum(${S.salesItems.qty} * ${S.salesItems.unitPrice}) desc`);
+    .where(range).groupBy(S.categories.categoryName).orderBy(sql`sum(${S.salesItems.qty} * ${S.salesItems.unitPrice}) desc`),
+  ]);
   return {
     filter: f, previous: { from: prevFrom, to: prevTo, ...prev },
     totalRevenue: cur.revenue, transactionCount: cur.transactionCount, itemsSold: cur.itemsSold,
