@@ -63,9 +63,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
           name="apple-mobile-web-app-status-bar-style"
           content="black-translucent"
         />
-        <meta name="apple-mobile-web-app-title" content={APP_TITLE} />
+        <meta name="apple-mobile-web-app-title" content="CTRL Coffee" />
+        <meta name="application-name" content="CTRL Coffee" />
         <link rel="icon" type="image/svg+xml" href={appPath("/favicon.svg")} />
-        <link rel="apple-touch-icon" href={appPath("/icon-180.svg")} />
+        <link rel="apple-touch-icon" href={appPath("/icon-180.png")} />
+        <link rel="manifest" href={appPath("/manifest.webmanifest")} />
         <Meta />
         <Links />
       </head>

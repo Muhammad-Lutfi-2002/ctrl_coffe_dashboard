@@ -8,3 +8,10 @@ installRouteChunkRecovery();
 configureClientRouterBasename();
 
 hydrateRoot(document, <HydratedRouter />);
+
+// PWA: memungkinkan aplikasi dipasang (Install app / Add to Home Screen). Hanya di produksi.
+if (import.meta.env.PROD && typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
+  });
+}
