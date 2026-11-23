@@ -5,6 +5,7 @@ import { PageBody, PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { TableShell } from "@/components/shared/table-shell";
 import { Empty, KpiCard, Section } from "@/components/scm/ui";
+import { KpiSkeletons, TableSkeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useList } from "@/hooks/use-list";
 import { useUser } from "@/hooks/use-user";
@@ -20,7 +21,7 @@ export default function DashboardRoute() {
   const { data: s, isLoading, error, refetch } = useList<any>("get-operational-summary");
   const role = user?.roleCode;
   if (error && !s) return <PageBody><PageHeader title="Dashboard" /><Empty>Ringkasan gagal dimuat: {error.message}. <button type="button" className="ml-1 text-primary underline" onClick={() => void refetch()}>Coba lagi</button></Empty></PageBody>;
-  if (isLoading || !s) return <PageBody><PageHeader title="Dashboard" /><p className="text-sm text-muted-foreground">Memuat ringkasan…</p></PageBody>;
+  if (isLoading || !s) return <PageBody><PageHeader title="Dashboard" /><KpiSkeletons count={4} /><TableSkeleton rows={4} cols={4} /></PageBody>;
   const fin = s.finance as any | undefined;
   return (
     <PageBody>

@@ -21,5 +21,5 @@ export function PageHeader({
 }
 
 export function PageBody({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-col gap-6 p-4 md:p-8">{children}</div>;
+  return <div className="ctrl-fade-in flex flex-col gap-6 p-4 md:p-8">{children}</div>;
 }
