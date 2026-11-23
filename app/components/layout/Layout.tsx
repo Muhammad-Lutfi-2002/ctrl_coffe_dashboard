@@ -10,7 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { useUser } from "@/hooks/use-user";
 import { canAccess, findNavItem, ROLE_LABELS } from "@/lib/nav";
 
+import { AppSplash } from "./AppSplash";
 import { QueryErrorBanner } from "./QueryErrorBanner";
+import { TopProgress } from "./TopProgress";
 import { Sidebar } from "./Sidebar";
 
 interface LayoutProps {
@@ -36,7 +38,7 @@ function SessionGate({ children }: LayoutProps) {
   useEffect(() => {
     if (unauthorized && (error?.statusCode === 401 || error?.status === 401 || /Sesi tidak valid|401/.test(error?.message ?? ""))) window.location.assign("/masuk");
   }, [unauthorized, error]);
-  if (isLoading) return <div className="flex h-screen items-center justify-center text-sm text-muted-foreground">Memuat sesi…</div>;
+  if (isLoading) return <AppSplash label="Memeriksa sesi" />;
   if (!user) {
     return (
       <div className="flex h-screen flex-col items-start justify-center gap-3 p-10">
@@ -57,6 +59,7 @@ function ShellFrame({ children }: LayoutProps) {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
+      <TopProgress />
       <aside className="hidden w-60 shrink-0 border-r border-sidebar-border bg-sidebar md:block">
         <Sidebar />
       </aside>
