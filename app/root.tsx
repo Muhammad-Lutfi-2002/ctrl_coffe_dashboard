@@ -35,6 +35,7 @@ export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
 ];
 
+const SUPABASE_ORIGIN = (() => { try { return new URL(import.meta.env.VITE_SUPABASE_URL as string).origin; } catch { return null; } })();
 const THEME_INIT_SCRIPT = getThemeInitScript("light", false);
 const FORCE_LIGHT_SCRIPT =
   "try{localStorage.setItem('theme','light')}catch(e){}var r=document.documentElement;r.classList.remove('dark');r.classList.add('light');r.setAttribute('data-theme','light');r.style.colorScheme='light';";
@@ -69,6 +70,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <link rel="icon" type="image/png" sizes="32x32" href={appPath("/favicon-32.png")} />
         <link rel="icon" type="image/svg+xml" href={appPath("/favicon.svg")} />
         <link rel="apple-touch-icon" href={appPath("/icon-180.png")} />
+        {SUPABASE_ORIGIN ? <link rel="preconnect" href={SUPABASE_ORIGIN} crossOrigin="" /> : null}
         <link rel="manifest" href={appPath("/manifest.webmanifest")} />
         <Meta />
         <Links />
