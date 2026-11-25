@@ -21,8 +21,11 @@ const LOGIN_REDIRECT_HTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Masuk ke CTRL + Coffee SCM, sistem informasi supply chain dan dashboard penjualan.">
+<meta name="theme-color" content="#1A3C34">
 <title>Masuk - CTRL Coffee</title>
 <script>location.replace("/masuk" + location.search);</script>
+<noscript><meta http-equiv="refresh" content="0;url=/masuk"></noscript>
 </head>
 <body><p><a href="/masuk">Lanjut ke halaman masuk</a></p></body>
 </html>`;
