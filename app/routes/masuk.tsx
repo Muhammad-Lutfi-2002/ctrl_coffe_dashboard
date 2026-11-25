@@ -38,7 +38,7 @@ export default function LoginPage() {
         <div aria-hidden className="pointer-events-none absolute -bottom-32 -left-16 size-80 rounded-full bg-accent/60" />
         <div aria-hidden className="pointer-events-none absolute bottom-24 left-24 size-24 rounded-full border border-accent/30" />
         <div className="relative flex items-center gap-2.5">
-          <img src="/ctrl-coffee-logo-hd.png" alt="" className="h-9 w-auto shrink-0" />
+          <img src="/ctrl-coffee-logo-72.png" alt="" width={61} height={72} decoding="async" className="h-9 w-auto shrink-0" />
           <p className="text-[15px] font-semibold leading-none tracking-tight">CTRL + Coffee</p>
         </div>
         <div className="relative max-w-md">
@@ -55,7 +55,7 @@ export default function LoginPage() {
       <main className="flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <img src="/ctrl-coffee-logo-hd.png" alt="" className="h-9 w-auto shrink-0" />
+            <img src="/ctrl-coffee-logo-72.png" alt="" width={61} height={72} decoding="async" className="h-9 w-auto shrink-0" />
             <p className="text-[15px] font-semibold leading-none tracking-tight">CTRL + Coffee</p>
           </div>
 
