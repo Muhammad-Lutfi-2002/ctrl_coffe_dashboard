@@ -23,7 +23,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full w-full flex-col">
       <div className="px-5 pb-6 pt-5">
         <div className="flex items-center gap-2.5">
-          <img src="/ctrl-coffee-logo-hd.png" alt="" className="h-9 w-auto shrink-0" />
+          <img src="/ctrl-coffee-logo-72.png" alt="" width={61} height={72} decoding="async" className="h-9 w-auto shrink-0" />
           <p className="text-[15px] font-semibold leading-none tracking-tight text-foreground">CTRL + Coffee</p>
         </div>
         <p className="mt-2 pl-0.5 text-xs text-muted-foreground">Supply Chain Management</p>

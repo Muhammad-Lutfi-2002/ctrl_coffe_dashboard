@@ -1,10 +1,10 @@
 /* Service worker CTRL + Coffee: hanya menyimpan berkas statis (ikon, aset build).
    Data transaksi, sesi, dan respons /_agent-native TIDAK pernah disimpan agar tidak ada data usang atau bocor antar pengguna. */
-const CACHE = "ctrl-coffee-static-v6";
+const CACHE = "ctrl-coffee-static-v7";
 const OFFLINE_URL = "/offline.html";
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll([OFFLINE_URL, "/icon-192.png", "/icon-512.png", "/ctrl-coffee-logo-hd.png"])).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll([OFFLINE_URL, "/icon-192.png", "/icon-512.png", "/ctrl-coffee-logo-192.png"])).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (event) => {

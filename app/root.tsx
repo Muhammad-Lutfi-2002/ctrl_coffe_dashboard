@@ -42,12 +42,16 @@ const FORCE_LIGHT_SCRIPT =
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="id" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         <meta
+          name="description"
+          content="CTRL + Coffee SCM: sistem informasi supply chain dan dashboard analitik penjualan untuk UMKM kedai kopi."
+        />
+        <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+          content="width=device-width, initial-scale=1"
         />
         <script
           suppressHydrationWarning
