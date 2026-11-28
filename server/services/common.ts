@@ -56,7 +56,9 @@ export async function nextNumber(tx: Exec, column: PgColumn, prefix: string) {
   return `${prefix}-${year}-${String(prev + 1).padStart(4, "0")}`;
 }
 
-export const today = () => new Date().toISOString().slice(0, 10);
+/** Tanggal hari ini menurut WIB (UTC+7). Dengan UTC, antara pukul 00.00-07.00 WIB tanggalnya masih kemarin sehingga validasi "tidak boleh masa lalu" salah menolak. */
+export const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+export const today = () => new Date(Date.now() + WIB_OFFSET_MS).toISOString().slice(0, 10);
 export const addDays = (iso: string, days: number) => {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);

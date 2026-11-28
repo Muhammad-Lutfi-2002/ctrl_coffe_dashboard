@@ -213,6 +213,14 @@ describe("alur pengadaan end-to-end", () => {
       expect(rep.totalOutflow).toBe(paidTotal + 300_000);
       expect(rep.budgetRemaining).toBe(10_000_000 - paidTotal - 300_000);
     });
+    it("pengeluaran operasional menolak data yang membuat angka ganda atau tidak masuk akal", async () => {
+      await expect(as("finance", () => run(recordExpense, { expenseDate: todayStr, description: "Pembayaran PO-2026-0001 (biji kopi)", amount: 100_000 }))).rejects.toThrow(/menu Pembayaran/);
+      await expect(as("finance", () => run(recordExpense, { expenseDate: todayStr, description: "Listrik", amount: 300_000 }))).rejects.toThrow(/sudah tercatat/);
+      await expect(as("finance", () => run(recordExpense, { expenseDate: future(40), description: "Sewa", amount: 100_000 }))).rejects.toThrow(/masa depan/);
+    });
+    it("saldo awal bahan hanya boleh dicatat sekali", async () => {
+      await expect(as("admin", () => run(recordOpeningBalance, { idMaterials: ids.beans, qty: 300_000 }))).rejects.toThrow(/Saldo awal bahan ini sudah pernah dicatat/);
+    });
   });
 });
 

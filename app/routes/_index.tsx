@@ -29,7 +29,7 @@ export default function DashboardRoute() {
         actions={role === "owner" || role === "finance" ? <Link to="/sales-analytics" className="text-sm font-medium text-primary underline-offset-4 hover:underline">Buka analitik penjualan →</Link> : undefined} />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {s.lowStockCount !== undefined ? <KpiCard label="Bahan di bawah stok minimum" value={formatNumber(s.lowStockCount)} tone={s.lowStockCount > 0 ? "negative" : "positive"} hint={s.lowStockCount > 0 ? "Perlu PR" : "Semua aman"} /> : null}
+        {s.lowStockCount !== undefined ? <KpiCard label="Bahan di bawah stok minimum" value={formatNumber(s.lowStockCount)} tone={s.lowStockCount > 0 ? "negative" : "positive"} hint={s.lowStockCount === 0 ? "Semua aman" : s.lowStockNeedsPrCount > 0 ? `${formatNumber(s.lowStockNeedsPrCount)} perlu PR` : "Semua sudah dalam PR/PO"} /> : null}
         {s.prPending !== undefined ? <KpiCard label="PR menunggu persetujuan" value={formatNumber(s.prPending)} hint={role === "owner" ? "Menunggu keputusan Owner" : undefined} /> : null}
         {s.prAwaitingQuotation !== undefined ? <KpiCard label="PR siap dibandingkan penawarannya" value={formatNumber(s.prAwaitingQuotation)} hint="Sudah disetujui, belum jadi PO" /> : null}
         {s.poOpen !== undefined ? <KpiCard label="PO berjalan" value={formatNumber(s.poOpen)} hint="Dikirim atau diterima sebagian" /> : null}
@@ -57,7 +57,7 @@ export default function DashboardRoute() {
               <Table>
                 <TableHeader><TableRow><TableHead>Bahan baku</TableHead><TableHead className="text-right">Saldo</TableHead><TableHead className="text-right">Minimum</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                 <TableBody>{s.lowStock.map((m: any) => (
-                  <TableRow key={m.idMaterials}><TableCell className="font-medium">{m.materialName}</TableCell><TableCell className="text-right tabular-nums">{formatNumber(m.balance)}</TableCell><TableCell className="text-right tabular-nums">{formatNumber(m.minStock)}</TableCell><TableCell><StatusBadge status={m.status} /></TableCell></TableRow>
+                  <TableRow key={m.idMaterials}><TableCell className="font-medium">{m.materialName}</TableCell><TableCell className="text-right tabular-nums">{formatNumber(m.balance)}</TableCell><TableCell className="text-right tabular-nums">{formatNumber(m.minStock)}</TableCell><TableCell><div className="flex items-center gap-2"><StatusBadge status={m.status} />{m.covered ? <span className="text-xs text-muted-foreground">Sudah dalam PR/PO</span> : null}</div></TableCell></TableRow>
                 ))}</TableBody>
               </Table>
             </TableShell>
