@@ -23,8 +23,26 @@ export async function stockBalances(db: Exec, materialIds?: string[]) {
   return rows.map((r) => ({ ...r, balance: round3(num(r.balance)), status: stockStatus(num(r.balance), r.minStock) }));
 }
 
+/**
+ * Bahan aktif yang saldonya sudah di titik minimum atau di bawahnya. Tiap baris diberi `covered`:
+ * true bila bahan itu sudah masuk PR yang masih berjalan (diajukan/disetujui) atau PO yang belum selesai
+ * diterima, sehingga dashboard tidak menyuruh membuat PR untuk bahan yang sudah dipesan.
+ */
 export async function lowStock(db: Exec) {
-  return (await stockBalances(db)).filter((r) => r.isActive && isBelowMinimum(r.balance, r.minStock));
+  const low = (await stockBalances(db)).filter((r) => r.isActive && isBelowMinimum(r.balance, r.minStock));
+  if (low.length === 0) return low.map((r) => ({ ...r, covered: false }));
+  const ids = low.map((r) => r.idMaterials);
+  const [inPr, inPo] = await Promise.all([
+    db.select({ id: schema.prItems.idMaterials }).from(schema.prItems)
+      .innerJoin(schema.purchaseRequests, eq(schema.purchaseRequests.idPurchaseRequests, schema.prItems.idPurchaseRequests))
+      .where(and(inArray(schema.prItems.idMaterials, ids), inArray(schema.purchaseRequests.status, ["submitted", "approved"]))),
+    db.select({ id: schema.quotationItems.idMaterials }).from(schema.poItems)
+      .innerJoin(schema.purchaseOrders, eq(schema.purchaseOrders.idPurchaseOrders, schema.poItems.idPurchaseOrders))
+      .innerJoin(schema.quotationItems, eq(schema.quotationItems.idQuotationItems, schema.poItems.idQuotationItems))
+      .where(and(inArray(schema.quotationItems.idMaterials, ids), inArray(schema.purchaseOrders.status, ["sent", "partial"]))),
+  ]);
+  const covered = new Set([...inPr, ...inPo].map((r) => r.id));
+  return low.map((r) => ({ ...r, covered: covered.has(r.idMaterials) }));
 }
 
 async function lockedBalance(tx: Tx, idMaterials: string) {
@@ -46,6 +64,11 @@ export async function recordMovement(tx: Tx, actor: Actor | null, input: Movemen
   if (!Number.isFinite(signed) || signed === 0) fail("Kuantitas tidak boleh nol", { statusCode: 400 });
   const { mat, balance } = await lockedBalance(tx, input.idMaterials);
   if (!mat.isActive && input.movementType !== "opname_adjustment") fail("Bahan baku tidak aktif", { statusCode: 400 });
+  if (input.movementType === "opening_balance") {
+    // Saldo awal hanya sekali per bahan; koreksi berikutnya lewat penyesuaian atau stok opname agar jejaknya jelas.
+    const [prev] = await tx.select({ id: SM.idStockMovements }).from(SM).where(and(eq(SM.idMaterials, input.idMaterials), eq(SM.movementType, "opening_balance"))).limit(1);
+    if (prev) fail("Saldo awal bahan ini sudah pernah dicatat. Gunakan penyesuaian atau stok opname untuk koreksi.", { statusCode: 409 });
+  }
   if (balance + signed < 0) fail(`Stok tidak cukup. Saldo ${balance}, diminta ${Math.abs(signed)}`, { statusCode: 400 });
   const [row] = await tx.insert(SM).values({
     idMaterials: input.idMaterials, movementType: input.movementType, qtyDelta: round3(signed), idUsers: actor?.idUsers ?? null,

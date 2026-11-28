@@ -129,6 +129,12 @@ export async function setBudget(tx: Tx, actor: Actor, period: string, amount: nu
 }
 
 export async function recordExpense(tx: Tx, actor: Actor, input: { expenseDate: string; description: string; amount: number }) {
+  if (input.expenseDate > today()) fail("Tanggal pengeluaran tidak boleh di masa depan", { statusCode: 400 });
+  // Pembayaran supplier dicatat lewat menu Pembayaran (ada persetujuan Owner dan tercatat di laporan sebagai pembayaran supplier).
+  // Kalau dicatat juga sebagai pengeluaran operasional, nominalnya terhitung dua kali dan anggaran tampak habis.
+  if (/\bPO-\d{4}-\d{3,}\b/i.test(input.description)) fail("Pembayaran PO dicatat lewat menu Pembayaran, bukan pengeluaran operasional, agar tidak terhitung dua kali", { statusCode: 400 });
+  const [dup] = await tx.select({ id: S.expenses.idExpenses }).from(S.expenses).where(and(eq(S.expenses.expenseDate, input.expenseDate), eq(S.expenses.amount, input.amount), sql`lower(${S.expenses.description}) = lower(${input.description.trim()})`)).limit(1);
+  if (dup) fail("Pengeluaran yang sama (tanggal, deskripsi, dan nominal) sudah tercatat", { statusCode: 409 });
   const period = input.expenseDate.slice(0, 7);
   const [b] = await tx.select().from(S.budgets).where(eq(S.budgets.period, period));
   const [row] = await tx.insert(S.expenses).values({ idBudgets: b?.idBudgets ?? null, idUsers: actor.idUsers, expenseDate: input.expenseDate, description: input.description, amount: input.amount }).returning();
@@ -149,7 +155,7 @@ export async function financeReport(db: Exec, period: string) {
   const [[budget], [ops], [sup], invoices, [rev]] = await Promise.all([
     db.select().from(S.budgets).where(eq(S.budgets.period, period)),
     db.select({ s: sql<string>`coalesce(sum(${S.expenses.amount}), 0)` }).from(S.expenses).where(and(sql`${S.expenses.expenseDate} >= ${from}`, sql`${S.expenses.expenseDate} < ${to}`)),
-    db.select({ s: sql<string>`coalesce(sum(${S.payments.amount}), 0)` }).from(S.payments).where(and(eq(S.payments.status, "paid"), sql`${S.payments.paidAt} >= ${from}::date`, sql`${S.payments.paidAt} < ${to}::date`)),
+    db.select({ s: sql<string>`coalesce(sum(${S.payments.amount}), 0)` }).from(S.payments).where(and(eq(S.payments.status, "paid"), sql`(${S.payments.paidAt} at time zone ${TZ})::date >= ${from}::date`, sql`(${S.payments.paidAt} at time zone ${TZ})::date < ${to}::date`)),
     listInvoices(db),
     db.select({ s: sql<string>`coalesce(sum(${S.salesItems.qty} * ${S.salesItems.unitPrice}), 0)` }).from(S.salesItems)
       .innerJoin(S.salesTransactions, eq(S.salesTransactions.idSalesTransactions, S.salesItems.idSalesTransactions))

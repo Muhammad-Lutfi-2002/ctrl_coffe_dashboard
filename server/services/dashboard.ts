@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 
 import { schema } from "../db.js";
-import { type Exec } from "./common.js";
+import { today, type Exec } from "./common.js";
 import { financeReport } from "./finance.js";
 import { lowStock } from "./inventory.js";
 import { supplierPerformance } from "./procurement.js";
@@ -9,7 +9,7 @@ import { supplierPerformance } from "./procurement.js";
 const S = schema;
 
 /** Ringkasan operasional (angka dari tabel transaksi). Tiap peran hanya menerima bagian yang menjadi kewenangannya. */
-export async function operationalSummary(db: Exec, role: string, period = new Date().toISOString().slice(0, 7)) {
+export async function operationalSummary(db: Exec, role: string, period = today().slice(0, 7)) {
   const count = async (q: Promise<{ n: number }[]>) => (await q)[0]?.n ?? 0;
   const is = (...r: string[]) => r.includes(role);
   // Semua query dijalankan paralel: latensi total = query terlama, bukan jumlah seluruh query.
@@ -25,7 +25,13 @@ export async function operationalSummary(db: Exec, role: string, period = new Da
     role === "owner" ? count(db.select({ n: sql<number>`count(*)::int` }).from(S.supplierInvoices).where(eq(S.supplierInvoices.status, "held"))) : undefined,
   ]);
   const out: Record<string, unknown> = { role };
-  if (low) { out.lowStock = low.slice(0, 10); out.lowStockCount = low.length; }
+  if (low) {
+    // Urutan: yang belum punya PR/PO lebih dulu (paling mendesak), lalu yang paling parah (saldo/minimum terkecil).
+    const sorted = [...low].sort((a, b) => Number(a.covered) - Number(b.covered) || a.balance / (a.minStock || 1) - b.balance / (b.minStock || 1));
+    out.lowStock = sorted.slice(0, 10);
+    out.lowStockCount = low.length;
+    out.lowStockNeedsPrCount = low.filter((r) => !r.covered).length;
+  }
   if (prPending !== undefined) { out.prPending = prPending; out.prAwaitingQuotation = prAwaitingQuotation; out.poOpen = poOpen; }
   if (paymentsPendingApproval !== undefined) { out.paymentsPendingApproval = paymentsPendingApproval; out.invoicesToVerify = invoicesToVerify; out.finance = finance; }
   if (performance) out.supplierPerformance = [...performance].sort((a, b) => b.performance - a.performance);
